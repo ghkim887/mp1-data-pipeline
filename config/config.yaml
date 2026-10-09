@@ -1,9 +1,12 @@
 validation:
   required_columns:
-    - Student_ID
-    - Score
+    - record_id
+    - name
+    - rating
+    - category
+    - status
   numeric_columns:
-    - Score
+    - rating
 
 processing:
   remove_duplicates: true
@@ -15,6 +18,6 @@ processing:
   outliers:
     enabled: true
     columns:
-      - Score
+      - rating
     method: "iqr"
     threshold: 1.5

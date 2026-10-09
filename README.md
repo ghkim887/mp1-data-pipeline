@@ -9,23 +9,17 @@ python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-## Verified example with the existing fixture
-
-```powershell
-.\venv\Scripts\python.exe pipeline.py --input fixtures/sample.csv --output output/clean.csv --config config/config.yaml --verbose
-```
-
-The command validates and retains all five rows, saves `output/clean.csv`, and prints:
-
-```text
-Cleaning report:
-{'rows_before': 5, 'rows_after': 5, 'rows_removed': 0, 'columns_before': 2, 'columns_after': 2, 'columns_removed': 0}
-```
-
-## Part 4 course fixture pending
-
-The provided `sample_data.csv` was not available when this branch was prepared. The current configuration targets the existing `sample.csv` (`Student_ID`, `Score`). Before final submission, add the course file at `fixtures/sample_data.csv`, update the configuration using its actual column names, run the command below, and record its observed output here.
+## Run the complete pipeline
 
 ```powershell
 .\venv\Scripts\python.exe pipeline.py --input fixtures/sample_data.csv --output output/clean.csv --config config/config.yaml --verbose
 ```
+
+The supplied course fixture contains 100 rows and five columns: `record_id`, `name`, `rating`, `category`, and `status`. The configuration requires all five columns, validates numeric values in `rating`, and removes rating outliers using IQR with a threshold of 1.5. The verified run removes two rows with invalid numeric ratings, two duplicate rows, two rows with missing values, and two outlier rows, saving 92 rows to `output/clean.csv`.
+
+```text
+Cleaning report:
+{'rows_before': 98, 'rows_after': 92, 'rows_removed': 6, 'columns_before': 5, 'columns_after': 5, 'columns_removed': 0}
+```
+
+The cleaning report starts after numeric validation, so its 98 starting rows exclude the two invalid numeric rows. For another compatible CSV, change the input path and the required, numeric, and outlier column names in the YAML configuration. The earlier fixtures remain available for loader testing, but their different schemas require a matching validation configuration.
