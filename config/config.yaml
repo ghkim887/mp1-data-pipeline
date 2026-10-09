@@ -1,3 +1,10 @@
+validation:
+  required_columns:
+    - Student_ID
+    - Score
+  numeric_columns:
+    - Score
+
 processing:
   remove_duplicates: true
 

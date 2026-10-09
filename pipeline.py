@@ -4,29 +4,24 @@ Data Processing Pipeline - CLI Template
 DS 3500 - MP1
 
 Usage:
-    python pipeline.py --input fixtures/sample.csv --config config.yaml --output clean.csv
-    python pipeline.py --input fixtures/sample.csv --config config.yaml --output clean.csv --verbose
+    python pipeline.py --input fixtures/sample.csv --config config/config.yaml --output output/clean.csv
 """
 
 import argparse
 import logging
 import sys
-from pathlib import Path
-
-from data_loaders import load_data
-from data_processor import process_data, create_cleaning_report
+from src import (
+    create_cleaning_report,
+    load_data,
+    process_data,
+    save_data,
+    setup_logging,
+    validate_dataframe,
+    validate_input,
+)
 
 
 logger = logging.getLogger(__name__)
-
-
-def setup_logging(verbose=False):
-    """Configure logging for the pipeline."""
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
-        datefmt="%H:%M:%S",
-    )
 
 
 def parse_arguments():
@@ -39,15 +34,6 @@ def parse_arguments():
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
     return parser.parse_args()
-
-
-def validate_input(filepath):
-    """Check whether the input path exists and is a file."""
-    if not Path(filepath).is_file():
-        logger.error(f"Input file not found: {filepath}")
-        return False
-    logger.info(f"Input file validated: {filepath}")
-    return True
 
 
 def main():
@@ -66,16 +52,30 @@ def main():
         config = load_data(args.config)
     except ValueError:
         sys.exit(1)
+    try:
+        validation = config["validation"]
+        required_columns = validation["required_columns"]
+        numeric_columns = validation["numeric_columns"]
+    except (KeyError, TypeError):
+        logger.error("Configuration must provide validation.required_columns and validation.numeric_columns")
+        sys.exit(1)
+    before_validation = len(data)
+    try:
+        data = validate_dataframe(data, required_columns, numeric_columns)
+    except ValueError:
+        sys.exit(1)
+    logger.info(f"Validation complete: {before_validation} → {len(data)} rows")
     original = data.copy()
     try:
         cleaned = process_data(data, config)
     except ValueError:
         sys.exit(1)
     report = create_cleaning_report(original, cleaned)
-    print(report)
     logger.info(f"Processing complete: {len(original)} → {len(cleaned)} rows")
-    cleaned.to_csv(args.output, index=False)
-    logger.info(f"Saved cleaned data to {args.output}")
+    output_path = save_data(cleaned, args.output)
+    logger.info(f"Saved cleaned data to {output_path}")
+    print("Cleaning report:")
+    print(report)
 
 
 if __name__ == "__main__":
