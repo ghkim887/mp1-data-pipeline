@@ -28,8 +28,12 @@ def load_json(filepath):
 
 def load_yaml(filepath):
     """Load a YAML file from a Path object into a Python object."""
-    with open(filepath, "r", encoding="utf-8") as file:
-        data = yaml.safe_load(file)
+    try:
+        with open(filepath, "r", encoding="utf-8") as file:
+            data = yaml.safe_load(file)
+    except yaml.YAMLError as error:
+        logger.error(f"Invalid YAML file: {filepath}: {error}")
+        raise ValueError(f"Invalid YAML file: {filepath}") from error
     logger.info(f"Loaded YAML file: {filepath}")
     return data
 

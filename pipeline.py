@@ -50,16 +50,23 @@ def main():
     try:
         data = load_data(args.input)
         config = load_data(args.config)
-    except ValueError:
+    except (ValueError, OSError) as error:
+        logger.error(f"Unable to load input or configuration: {error}")
         sys.exit(1)
     try:
         validation = config["validation"]
         required_columns = validation["required_columns"]
         numeric_columns = validation["numeric_columns"]
+        if any(
+            not isinstance(columns, list)
+            or not all(isinstance(column, str) for column in columns)
+            for columns in (required_columns, numeric_columns)
+        ):
+            raise TypeError("Validation columns must be lists of column names")
     except (KeyError, TypeError):
         logger.error("Configuration must provide validation.required_columns and validation.numeric_columns")
         sys.exit(1)
-    before_validation = len(data)
+    before_validation = len(data) if hasattr(data, "__len__") else 0
     try:
         data = validate_dataframe(data, required_columns, numeric_columns)
     except ValueError:
@@ -72,7 +79,10 @@ def main():
         sys.exit(1)
     report = create_cleaning_report(original, cleaned)
     logger.info(f"Processing complete: {len(original)} → {len(cleaned)} rows")
-    output_path = save_data(cleaned, args.output)
+    try:
+        output_path = save_data(cleaned, args.output)
+    except OSError:
+        sys.exit(1)
     logger.info(f"Saved cleaned data to {output_path}")
     print("Cleaning report:")
     print(report)

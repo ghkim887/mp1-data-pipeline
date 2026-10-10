@@ -8,6 +8,26 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def _config_error(message):
+    """Report invalid processing settings to the calling program."""
+    logger.error(message)
+    raise ValueError(message)
+
+
+def _step_settings(processing, name, required):
+    """Validate a processing section before its settings are used."""
+    settings = processing.get(name, {})
+    if not isinstance(settings, dict):
+        _config_error(f"processing.{name} must be a mapping")
+    if not isinstance(settings.get("enabled", False), bool):
+        _config_error(f"processing.{name}.enabled must be true or false")
+    if settings.get("enabled", False):
+        for key in required:
+            if key not in settings:
+                _config_error(f"Missing required setting: processing.{name}.{key}")
+    return settings
+
+
 def remove_duplicates(df):
     """Remove duplicate rows."""
     result = df.drop_duplicates()
@@ -32,7 +52,9 @@ def remove_outliers(df, columns, method, threshold):
     if method not in ("iqr", "zscore"):
         logger.error(f"Unsupported outlier method: {method}")
         raise ValueError(f"Unsupported outlier method: {method}")
-    if not isinstance(threshold, (int, float)) or not math.isfinite(threshold) or threshold < 0:
+    if not isinstance(columns, list) or not all(isinstance(column, str) for column in columns):
+        _config_error("Outlier columns must be a list of column names")
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not math.isfinite(threshold) or threshold < 0:
         logger.error(f"Invalid outlier threshold: {threshold}")
         raise ValueError(f"Invalid outlier threshold: {threshold}")
     result = df
@@ -75,13 +97,15 @@ def process_data(df, config):
         logger.error("Configuration must contain a processing mapping")
         raise ValueError("Configuration must contain a processing mapping")
     processing = config["processing"]
+    if not isinstance(processing.get("remove_duplicates", False), bool):
+        _config_error("processing.remove_duplicates must be true or false")
+    missing = _step_settings(processing, "missing", ["axis"])
+    outliers = _step_settings(processing, "outliers", ["columns", "method", "threshold"])
     result = df
     if processing.get("remove_duplicates", False):
         result = remove_duplicates(result)
-    missing = processing.get("missing", {})
     if missing.get("enabled", False):
         result = handle_missing(result, axis=missing["axis"])
-    outliers = processing.get("outliers", {})
     if outliers.get("enabled", False):
         result = remove_outliers(
             result, columns=outliers["columns"],

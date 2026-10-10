@@ -23,3 +23,5 @@ Cleaning report:
 ```
 
 The cleaning report starts after numeric validation, so its 98 starting rows exclude the two invalid numeric rows. For another compatible CSV, change the input path and the required, numeric, and outlier column names in the YAML configuration. The earlier fixtures remain available for loader testing, but their different schemas require a matching validation configuration.
+
+Invalid processing settings, malformed YAML, and filesystem read or save errors are logged at ERROR level and cause the command to exit with status 1. Enabled processing steps must supply their required settings; disabled steps can omit them. A cleaning report and saving-success message are printed only after the CSV has been saved successfully.
